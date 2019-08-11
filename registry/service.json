@@ -1,0 +1,15 @@
+{
+    "name": "API Registry service",
+    "domain": "mcb",
+    "port": "11036",
+    "version": "0.0.1",
+    "settings": {
+        "fastify": {
+            "http2": false,
+            "trustProxy": true,
+            "logger": {
+                "name": "registry-service"
+            }
+        }
+    }
+}

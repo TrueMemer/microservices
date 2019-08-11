@@ -1,0 +1,11 @@
+{
+    "type": "object",
+    "required": ["name", "version", "prefix", "port"],
+    "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "prefix": { "type": "string" },
+        "hostname": { "type": ["string", "null"] },
+        "port": { "type": "integer" }
+    }
+}

@@ -1,0 +1,9 @@
+{
+    "params": {
+        "type": "object",
+        "required": ["guid"],
+        "properties": {
+            "guid": { "type": "string" }
+        }
+    }
+}

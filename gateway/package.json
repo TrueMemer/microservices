@@ -1,0 +1,18 @@
+{
+  "name": "mcb-gateway",
+  "version": "0.0.1",
+  "description": "API gateway",
+  "main": "app.js",
+  "author": "Alexander Memer <mkoaleksedos@gmail.com>",
+  "dependencies": {
+    "axios": "^0.19.0",
+    "fastify": "^2.7.1"
+  },
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.1"
+  }
+}
