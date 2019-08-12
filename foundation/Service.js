@@ -3,6 +3,7 @@ const path = require("path");
 const Ajv = require("ajv");
 const axios = require("axios");
 const Fastify = require("fastify");
+const recursive = require("fs-readdir-recursive");
 
 class InvalidConfigException extends Error {
     constructor(message) {
@@ -23,6 +24,7 @@ class Service {
      * Fastify server object.
      */
     app = null;
+
     /**
      * JSON schema validator.
      */
@@ -34,7 +36,7 @@ class Service {
      * @param {string} schemasFolderPath 
      */
     loadValidationSchemas(schemasFolderPath = path.join(__dirname, "schemas")) {
-        const files = fs.readdirSync(schemasFolderPath);
+        const files = recursive(schemasFolderPath);
 
         files.forEach((file) => {
             if (!file.endsWith(".schema.json")) return;
@@ -43,6 +45,8 @@ class Service {
             const schema = require(fullPath);
 
             this.schemaValidator.addSchema(schema, schema.name);
+            // TODO: Find a way to set fastify's ajv object
+            // this.app.addSchema(schema, schema.name);
         });
     }
 
@@ -116,7 +120,7 @@ class Service {
      * For internal use only.
      */
     initHttpServer() {
-        this.app = Fastify(this.config.settings.fastify || {});
+        this.app = Fastify(Object.assign(this.config.settings.fastify || {}, { prefix: this.config.prefix }));
     }
 
     /**
@@ -145,19 +149,27 @@ class Service {
      * @throws {Error}
      */
     registerControllers(controllerDirPath = path.join(__dirname, "controllers")) {
-        const files = fs.readdirSync(controllerDirPath);
-
-        const appMiddleware = (req, res, done) => {
-            req.app = this;
-            done();
-        }
+        const files = recursive(controllerDirPath);
 
         files.forEach((file) => {
             if (!file.endsWith(".controller.js")) return;
 
-            const controller = require(path.join(controllerDirPath, file));
+            const appMiddleware = (req, res, done) => {
+                req.app = this;
+                done();
+            }
 
-            this.app.route(Object.assign({ preHandler: appMiddleware }, controller));
+            const route = (fastify, opts, next) => {
+                const controllers = require(path.join(controllerDirPath, file));
+
+                for (const c of controllers) {
+                    fastify.route(Object.assign({ preHandler: appMiddleware }, c));
+                }
+
+                next();
+            };
+
+            this.app.register(route, { prefix: this.config.prefix })
         });
     }
 

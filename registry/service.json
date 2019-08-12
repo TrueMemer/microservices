@@ -1,8 +1,10 @@
 {
-    "name": "API Registry service",
-    "domain": "mcb",
-    "port": "11036",
+    "guid": "ca4f93b2-0199-4dc8-ab50-908b9888a0da",
+    "name": "registry-service",
+    "domain": "mcba",
+    "port": 11036,
     "version": "0.0.1",
+    "self-registry": false,
     "settings": {
         "fastify": {
             "http2": false,

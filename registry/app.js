@@ -4,119 +4,59 @@ const service = require("./service.json");
 const axios = require("axios");
 const path = require("path");
 const fs = require("fs");
+const Service = require("../foundation/Service").Service;
 
-const registerServiceBodyScheme = require("./schemas/catalog/register.json");
-const getServiceScheme = require("./schemas/catalog/get.json");
+class RegistryService extends Service {
 
-const services = new Map();
+    services = new Map();
 
-const app = fastify(service.settings.fastify);
-
-async function checkServiceHealth(service) {
-    try {
-        const r = await axios({
-            method: "get",
-            url: `http://${service.hostname || "localhost"}:${service.port}/`
-        });
-    } catch (e) {
-        return "problem";
-    }
-
-    return "active";
-}
-
-function checkAllServicesHealth() {
-    services.forEach(async (value, key, map) => { value.status = await checkServiceHealth(value); })
-}
-
-function registerStaticServices() {
-    // TODO: Иметь это в конфиге
-    const dirPath = path.join(__dirname, "services");
-
-    fs.readdir(dirPath, (err, files) => {
-        if (err) {
-            return app.log.error("Failed to register static services (unable to scan directory)");
+    async checkServiceHealth(service) {
+        try {
+            const r = await axios({
+                method: "get",
+                url: `http://${service.hostname || "localhost"}:${service.port}${service.prefix}/`
+            });
+        } catch (e) {
+            return "problem";
         }
 
-        files.forEach((file) => {
-            const service = require(path.join(dirPath, file));
-            if (!service.guid)
-                service.guid = uuid();
-            service.status = "unknown";
+        return "active";
+    }
 
-            services.set(service.guid, service);
+    checkAllServicesHealth() {
+        this.services.forEach(async (value, key, map) => { value.status = await this.checkServiceHealth(value); })
+    }
+
+    registerStaticServices(servicesPath = path.join(__dirname, "services")) {
+        fs.readdir(servicesPath, (err, files) => {
+            if (err) {
+                return app.log.error("Failed to register static services (unable to scan directory)");
+            }
+
+            files.forEach((file) => {
+                if (!file.endsWith(".service.json")) return;
+                const service = require(path.join(servicesPath, file));
+                if (!service.guid)
+                    service.guid = uuid();
+                service.status = "unknown";
+
+                this.services.set(service.guid, service);
+            });
         });
-    });
+    }
+
+    constructor(configFilePath) {
+        super(configFilePath);
+
+        // this.loadValidationSchemas(path.join(__dirname, "schemas"));
+        this.registerControllers(path.join(__dirname, "controllers"));
+
+        setInterval(async () => this.checkAllServicesHealth(), 10000);
+        this.registerStaticServices();
+    }
+
 }
 
-app.ready(async () => {
-    setInterval(checkAllServicesHealth, 10000);
-    registerStaticServices();
-});
+const app = new RegistryService(path.join(__dirname, "service.json"));
 
-app.get("/", async (req, res) => {
-    return { name: service.name, version: service.version };
-});
-
-app.get("/v1/catalog/:guid", { schema: getServiceScheme }, async (req, res) => {
-    let service = services.get(req.params.guid);
-
-    if (!service) {
-        res.status(404);
-        return { "error": "service is not found" };
-    }
-
-    return service;
-});
-
-app.get("/v1/catalog/listAll", async (req, res) => {
-    return Array.from(services.values());
-});
-
-app.post("/v1/catalog/register", { schema: { body: registerServiceBodyScheme } }, async (req, res) => {
-    let newService = req.body;
-    if (!newService.guid)
-        newService.guid = uuid();
-    else {
-        if (services.has(newService.guid)) {
-            res.status(304);
-            return services.get(newService.guid);
-        }
-    }
-    newService.status = "unknown";
-
-    services.set(newService.guid, newService);
-
-    req.log.info(`service with guid ${newService.guid} and name ${newService.name} was registered`);
-
-    // TODO: Система подписки на ивенты
-    // services.forEach(async (value, key, map) => {
-    //     if (value.hasOwnProperty("subscribeToEvents")) {
-    //         const url = `http://${value.hostname || "localhost"}:${value.port}${value.prefix}/v1/events/registerHandler`;
-
-    //         const r = await axios({
-    //             method: "post",
-    //             url,
-    //             data: newService,
-    //             validateStatus: () => true
-    //         });
-    //     }
-    // });
-
-    return newService;
-});
-
-// TODO
-app.get("/v1/catalog/unregister", (req, res) => {
-    return {};
-});
-
-(async () => {
-    try {
-        await app.listen(service.port);
-        app.log.info(`Service ${service.name} is listening on port ${service.port}`);
-    } catch (e) {
-        app.log.fatal(e);
-        process.exit(-1);
-    }
-})()
+app.listen();

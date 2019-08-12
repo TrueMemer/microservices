@@ -1,4 +1,5 @@
 {
+    "name": "serviceRegisterSchema",
     "type": "object",
     "required": ["name", "version", "prefix", "port"],
     "properties": {

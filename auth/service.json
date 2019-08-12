@@ -3,7 +3,7 @@
     "name": "auth-service",
     "domain": "mcbb",
     "port": 11037,
-    "prefix": "/",
+    "prefix": "/auth",
     "version": "0.0.1",
     "self-registry": true,
     "services": {
