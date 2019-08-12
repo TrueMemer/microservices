@@ -1,4 +1,16 @@
-const Path = require("path");
+const path = require("path");
 const Service = require("../foundation/Service").Service;
 
-const app = new Service(Path.join(__dirname, "service.json"));
+class AuthService extends Service {
+
+    constructor() {
+        super(path.join(__dirname, "service.json"));
+
+        this.registerControllers(path.join(__dirname, "controllers"));
+    }
+
+}
+
+const app = new AuthService(path.join(__dirname, "service.json"));
+
+app.listen();

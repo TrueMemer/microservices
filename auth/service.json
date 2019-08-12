@@ -1,6 +1,6 @@
 {
     "guid": "4be0fd09-1f43-4f64-b890-ac2a029c0bae",
-    "name": "gateway-service",
+    "name": "auth-service",
     "domain": "mcbb",
     "port": 11037,
     "prefix": "/",
@@ -14,7 +14,7 @@
             "http2": false,
             "trustProxy": true,
             "logger": {
-                "name": "gateway-service"
+                "name": "auth-service"
             }
         }
     }
