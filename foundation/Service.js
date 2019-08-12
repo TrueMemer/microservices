@@ -11,12 +11,28 @@ class InvalidConfigException extends Error {
     }
 }
 
+/** Class respesenting a service */
 class Service {
 
+    /**
+     * Service configuration object.
+     */
     config = null;
+
+    /**
+     * Fastify server object.
+     */
     app = null;
+    /**
+     * JSON schema validator.
+     */
     schemaValidator = new Ajv({ allErrors: true });
 
+    /**
+     * Loads schema files from schemasFolderPath and adds them to validator.
+     * All schema files must have ".schema.json" extensions.
+     * @param {string} schemasFolderPath 
+     */
     loadValidationSchemas(schemasFolderPath = path.join(__dirname, "schemas")) {
         const files = fs.readdirSync(schemasFolderPath);
 
@@ -30,6 +46,12 @@ class Service {
         });
     }
 
+    /**
+     * Registers a service in registry service specified in config file.
+     * If config["self-register"] is true, will be executed on service initialization.
+     * 
+     * Not recommended to use besides internal use.
+     */
     async register() {
         if (!this.config.services["registry-service"]) {
             this.app.log.warn("Service tried to register, but registry server is not specified in config file");
@@ -59,10 +81,21 @@ class Service {
         }
     }
 
+    /**
+     * Validates config object with internal scheme.
+     * For internal use only.
+     * @param {object} config 
+     */
     validateConfiguration(config) {
         return this.schemaValidator.validate("serviceConfigSchema", config);
     }
 
+    /**
+     * Loads config file from disk.
+     * Not recommended to use.
+     * @param {string} configFilePath - config file path
+     * @param {string} configFormat - config file format (default: json)
+     */
     loadConfigFromFile(configFilePath, configFormat = "json") {
         let config = {};
 
@@ -78,14 +111,39 @@ class Service {
         return config;
     }
 
+    /**
+     * Initializes http server.
+     * For internal use only.
+     */
     initHttpServer() {
         this.app = Fastify(this.config.settings.fastify || {});
     }
 
+    /**
+     * Starts listeting on port specified in config file.
+     */
     listen() {
         this.app.listen(this.config.port);
     }
 
+    /**
+     * This method registers controllers from controllerDirPath.
+     * All controllers in a directory must have ".controller.js" extension.
+     * These controller files use fastify route syntax.
+     * 
+     * @example
+     * {
+     *  method: "GET",
+     *  url: "/",
+     *  handler: (req, res) => {
+     *    res.send("ok");
+     *  }
+     * }
+     * 
+     * @param {string} controllerDirPath - controllers directory path
+     * 
+     * @throws {Error}
+     */
     registerControllers(controllerDirPath = path.join(__dirname, "controllers")) {
         const files = fs.readdirSync(controllerDirPath);
 
@@ -103,6 +161,12 @@ class Service {
         });
     }
 
+    /**
+     * Creates a new service.
+     * Loads configuration file from config. If config is a string, it will treat it as a path. 
+     * @param {string | object} config - config file path or object
+     * @param {string} configFormat - config format (for now only json is supported)
+     */
     constructor(config, configFormat = "json") {
 
         this.loadValidationSchemas();
