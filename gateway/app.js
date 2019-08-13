@@ -2,11 +2,14 @@ const Service = require("../foundation/Service").Service;
 const path = require("path");
 
 class GatewayService extends Service {
-    constructor() {
-        super(path.join(__dirname, "service.json"));
+
+    constructor(configPath) {
+        super(configPath);
+
+        this.registerControllers(path.join(__dirname, "controllers"), false);
     }
 }
 
-const app = new GatewayService();
+const app = new GatewayService(path.join(__dirname, "service.json"));
 
 app.listen();

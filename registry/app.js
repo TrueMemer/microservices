@@ -1,6 +1,4 @@
-const fastify = require("fastify");
 const uuid = require("uuid/v4");
-const service = require("./service.json");
 const axios = require("axios");
 const path = require("path");
 const fs = require("fs");
@@ -14,7 +12,7 @@ class RegistryService extends Service {
         try {
             const r = await axios({
                 method: "get",
-                url: `http://${service.hostname || "localhost"}:${service.port}${service.prefix}/`
+                url: `http://${service.hostname || "localhost"}:${service.port}${service.prefix}`
             });
         } catch (e) {
             return "problem";
@@ -48,7 +46,7 @@ class RegistryService extends Service {
     constructor(configFilePath) {
         super(configFilePath);
 
-        // this.loadValidationSchemas(path.join(__dirname, "schemas"));
+        this.loadValidationSchemas(path.join(__dirname, "schemas"));
         this.registerControllers(path.join(__dirname, "controllers"));
 
         setInterval(async () => this.checkAllServicesHealth(), 10000);

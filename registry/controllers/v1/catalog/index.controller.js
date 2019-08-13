@@ -25,10 +25,10 @@ module.exports = [
     {
         method: "POST",
         url: "/v1/catalog/register",
-        // schema: {
-        //     body: "serviceRegisterSchema#"
-        // },
         handler: (req, res) => {
+            const bodyValid = req.app.schemaValidator.validate("serviceRegisterSchema", req.body);
+            if (!bodyValid) return res.status(400).send({ errors: req.app.schemaValidator.errors });
+
             let newService = req.body;
             if (!newService.guid)
                 newService.guid = uuid();

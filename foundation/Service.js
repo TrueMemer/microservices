@@ -5,6 +5,8 @@ const axios = require("axios");
 const Fastify = require("fastify");
 const recursive = require("fs-readdir-recursive");
 
+const RegistryClient = require("./RegistryClient");
+
 class InvalidConfigException extends Error {
     constructor(message) {
         super(message);
@@ -31,6 +33,11 @@ class Service {
     schemaValidator = new Ajv({ allErrors: true });
 
     /**
+     * Client for communicating with registry service
+     */
+    registryClient = null;
+
+    /**
      * Loads schema files from schemasFolderPath and adds them to validator.
      * All schema files must have ".schema.json" extensions.
      * @param {string} schemasFolderPath 
@@ -39,6 +46,7 @@ class Service {
         const files = recursive(schemasFolderPath);
 
         files.forEach((file) => {
+            console.log(file)
             if (!file.endsWith(".schema.json")) return;
 
             const fullPath = path.join(schemasFolderPath, file);
@@ -66,6 +74,7 @@ class Service {
                 method: "post",
                 baseURL: `http://${this.config.services["registry-service"].hostname}:${this.config.services["registry-service"].port}`,
                 url: "/v1/catalog/register",
+                timeout: 1000,
                 validateStatus: (status) => { return status >= 200 && status <= 304; },
                 data: {
                     guid: this.config.guid,
@@ -79,9 +88,24 @@ class Service {
 
             this.app.log.info("Service is registered");
         } catch (e) {
-            this.app.log.warn("Failed to register service (is registry service up?). Retrying after 10 seconds...");
-            setTimeout(async () => this.register(), 10000);
-            return;
+            if (e.response) {
+                if (e.response.status >= 400) {
+                    this.app.log.warn({ data: e.response.data }, `Failed to register service (${e.response.status}).`)
+                    return;
+                }
+            } else if (e.request) {
+                if (e.errno == "ECONNREFUSED") {
+                    console.log(e);
+                    this.app.log.warn("Failed to register service (is registry service up?). Retrying after 10 seconds...");
+                    setTimeout(async () => this.register(), 10000);
+                    return;
+                }
+            } else {
+                this.app.log.warn("Failed to register service (unknown error).");
+                //this.app.log.error(e);
+                console.log(e);
+                return;
+            }
         }
     }
 
@@ -145,14 +169,19 @@ class Service {
      * }
      * 
      * @param {string} controllerDirPath - controllers directory path
+     * @param {boolean} registerDefaultRoutes - if true, registers default root controller for health check
      * 
      * @throws {Error}
      */
-    registerControllers(controllerDirPath = path.join(__dirname, "controllers")) {
+    registerControllers(controllerDirPath = path.join(__dirname, "controllers"), registerDefaultRoutes = true) {
         const files = recursive(controllerDirPath);
 
         files.forEach((file) => {
             if (!file.endsWith(".controller.js")) return;
+            // Don't register default route if regsiterDefaultRoutes is false
+            if (file.endsWith(".default.controller.js") && !registerDefaultRoutes) return;
+
+            console.log(file);
 
             const appMiddleware = (req, res, done) => {
                 req.app = this;
@@ -192,10 +221,20 @@ class Service {
         }
 
         this.initHttpServer();
-        this.registerControllers();
+        this.registerControllers(path.join(__dirname, "controllers"), this.config.registerDefaultRoutes);
 
         if (this.config["self-registry"])
             this.register();
+
+        let registryServices = this.config.services.filter(value => value.type == "registry");
+
+        if (registryServices.length != 0) {
+            registryServices = registryServices.sort((a, b) => {
+                return b.priority - a.priority;
+            });
+
+            this.registryClient = new RegistryClient(registryServices[0].hostname, registryServices[0].port);
+        }
     }
 
 }

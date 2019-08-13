@@ -1,14 +1,15 @@
 {
-    "guid": "4be0fd09-1f43-4f64-b890-ac2a029c0bae",
+    "guid": "5c697c5c-9649-4082-bb23-ef26cd5d6f50",
     "name": "auth-service",
     "domain": "mcbb",
-    "port": 11037,
+    "port": 11035,
     "prefix": "/auth",
     "version": "0.0.1",
     "self-registry": true,
-    "services": {
-        "registry-service": { "hostname": "localhost", "port": "11036" }
-    },
+    "services": [
+        { "name": "registry-service", "hostname": "localhost", "type": "registry", "port": "11036", "priority": 10 },
+        { "name": "registry-service", "hostname": "localhost", "type": "registry", "port": "11036", "priority": 20 }
+    ],
     "settings": {
         "fastify": {
             "http2": false,

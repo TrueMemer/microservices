@@ -6,9 +6,8 @@
     "prefix": "/",
     "version": "0.0.1",
     "self-registry": true,
-    "services": {
-        "registry-service": { "hostname": "localhost", "port": "11036" }
-    },
+    "registerDefaultRoutes": false,
+    "services": [],
     "settings": {
         "fastify": {
             "http2": false,
